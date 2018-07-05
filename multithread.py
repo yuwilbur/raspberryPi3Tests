@@ -4,41 +4,29 @@ import time
 global cycle
 cycle = 0.0
 
-class Hello5Program:
-    def __init__(self):
-        self._running = True
-
-    def terminate(self):
-        self._running = False
-
+class Hello5Program(Thread):
     def run(self):
         global cycle
-        while self._running:
+        while True:
             time.sleep(5)
             cycle = cycle + 1.0
             print "5 Second Thread cycle+1.0 - ", cycle
 
-class Hello2Program:
-    def __init__(self):
-        self._running = True
-
-    def terminate(self):
-        self._running = False
-
+class Hello2Program(Thread):
     def run(self):
         global cycle
-        while self._running:
+        while True:
             time.sleep(2)
             cycle = cycle + 0.5
             print "2 Second Thread cycle+1.0 - ", cycle
 
 FiveSecond = Hello5Program()
-FiveSecondThread = Thread(target=FiveSecond.run)
-FiveSecondThread.start()
+FiveSecond.setDaemon(True)
+FiveSecond.start()
 
 TwoSecond = Hello2Program()
-TwoSecondThread = Thread(target=TwoSecond.run)
-TwoSecondThread.start()
+TwoSecond.setDaemon(True)
+TwoSecond.start()
 
 Exit = False
 while(Exit==False):
@@ -47,6 +35,4 @@ while(Exit==False):
     time.sleep(1)
     if (cycle > 5): Exit = True
 
-TwoSecond.terminate()
-FiveSecond.terminate()
 print "Goodbye :)"
