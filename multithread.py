@@ -1,38 +1,25 @@
 from threading import Thread
 import time
 
-global cycle
-cycle = 0.0
+COUNT = 5000000
+def countdown(n):
+    while n>0:
+        n -= 1
 
-class Hello5Program(Thread):
-    def run(self):
-        global cycle
-        while True:
-            time.sleep(5)
-            cycle = cycle + 1.0
-            print "5 Second Thread cycle+1.0 - ", cycle
+t1 = Thread(target=countdown, args=(COUNT//4,))
+t2 = Thread(target=countdown, args=(COUNT//4,))
+t3 = Thread(target=countdown, args=(COUNT//4,))
+t4 = Thread(target=countdown, args=(COUNT//4,))
 
-class Hello2Program(Thread):
-    def run(self):
-        global cycle
-        while True:
-            time.sleep(2)
-            cycle = cycle + 0.5
-            print "2 Second Thread cycle+1.0 - ", cycle
+start = time.time()
+t1.start()
+t2.start()
+t3.start()
+t4.start()
+t1.join()
+t2.join()
+t3.join()
+t4.join()
+end = time.time()
 
-FiveSecond = Hello5Program()
-FiveSecond.setDaemon(True)
-FiveSecond.start()
-
-TwoSecond = Hello2Program()
-TwoSecond.setDaemon(True)
-TwoSecond.start()
-
-Exit = False
-while(Exit==False):
-    cycle = cycle + 0.1
-    print "Main Program increase cycle+0.1 - ", cycle
-    time.sleep(1)
-    if (cycle > 5): Exit = True
-
-print "Goodbye :)"
+print('Time taken in seconds -', end - start)
