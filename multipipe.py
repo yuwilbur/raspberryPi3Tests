@@ -1,33 +1,74 @@
 """
 multi_pipe.py
 """
-from multiprocessing import Process, Pipe
+from multiprocessing import Process, Pipe, Lock
 import time
+import copy
 
-def reader(pipe):
+def heavyWork():
+    heavyWork = 0
+    for i in range(0, 100000):
+        heavyWork = heavyWork + 1
+
+def lightWork():
+    lightWork = 0
+    for i in range(0, 10000):
+        lightWork = lightWork + 1
+
+
+def reader(lock, pipe, name):
     output_p, input_p = pipe
-    input_p.close()    # We are only reading
+    read_lock, send_lock = lock
+    msg = 0
     while True:
         try:
-            msg = output_p.recv()    # Read from the output pipe and do nothing
+            read_lock.acquire()
+            msg = input_p.recv()    # Read from the output pipe and do nothing
+            read_lock.release()
+            heavyWork()
+            #send_lock.acquire()
+            if not output_p.poll():
+                input_p.send((name,msg))
+            #send_lock.release()
         except EOFError:
             break
 
-def writer(count, input_p):
-    for ii in xrange(0, count):
-        input_p.send(ii)             # Write 'count' numbers into the input pipe
-
 if __name__=='__main__':
-    for count in [10**4, 10**5]:
-        output_p, input_p = Pipe()
-        reader_p = Process(target=reader, args=((output_p, input_p),))
-        reader_p.daemon = True
-        reader_p.start()     # Launch the reader process
+    output_p, input_p = Pipe()
+    lock = (Lock(), Lock())
+    read_lock, send_lock = lock
 
-        output_p.close()       # We no longer need this part of the Pipe()
-        _start = time.time()
-        writer(count, input_p) # Send a lot of stuff to reader()
-        input_p.close()        # Ask the reader to stop when it reads EOF
-        reader_p.join()
-        print "Sending %s numbers to Pipe() took %s seconds" % (count, 
-            (time.time() - _start))
+    p1 = Process(target=reader, args=(lock, (output_p, input_p),'1',))
+    p1.daemon = True
+    p1.start()
+
+    p2 = Process(target=reader, args=(lock, (output_p, input_p),'2',))
+    p2.daemon = True
+    p2.start()
+
+    p3 = Process(target=reader, args=(lock, (output_p, input_p),'3',))
+    p3.daemon = True
+    p3.start()
+
+    # p4 = Process(target=reader, args=(lock, (output_p, input_p),'4',))
+    # p4.daemon = True
+    # p4.start()
+
+    start = time.time()
+    processed = 0
+    missedProcessed = 0
+    latestProcessed = time.time()
+    for i in range(0,10000):
+        lightWork()
+        if not input_p.poll():
+            output_p.send((time.time(),i))
+        if output_p.poll():
+            result = output_p.recv()
+            if result[1][0] > latestProcessed:
+                processed = processed + 1
+                latestProcessed = result[1][0]
+                print result
+            else:
+                missedProcessed = missedProcessed + 1
+                print result, 'MISS'
+    print 'Performance: ', time.time() - start, processed, missedProcessed
